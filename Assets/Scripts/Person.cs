@@ -10,6 +10,9 @@ public class Person : MonoBehaviour
     public GameObject[] Targets;
     public float ReachedTargetDistance = 3;
     public bool ShuffleTargets = true;
+    public Animator Anim;
+    public float AnimSpeedAdjust = 1.5f;
+    public float Speed = 6f;
 
     [HideInInspector]
     public NavMeshAgent Agent;
@@ -59,6 +62,10 @@ public class Person : MonoBehaviour
     // Update is called once per frame
     private void Update()
     {
+        //Animation
+        float animSpeed = Agent.velocity.magnitude;
+        Anim.SetFloat("Forward", animSpeed / Speed / AnimSpeedAdjust);
+
         //only continue if Agent is working
         if (!Agent.enabled) { return; }
 

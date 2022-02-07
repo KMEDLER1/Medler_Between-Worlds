@@ -1,11 +1,13 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+
 [System.Serializable]
 public class CycleGeometry
 {
     public GameObject handles, lowerFork, fWheelVisual, RWheel, crank, lPedal, rPedal, fGear, rGear;
 }
+
 [System.Serializable]
 public class PedalAdjustments
 {
@@ -13,12 +15,14 @@ public class PedalAdjustments
     public Vector3 lPedalOffset, rPedalOffset;
     public float pedalingSpeed;
 }
+
 [System.Serializable]
 public class WheelFrictionSettings
 {
     public PhysicMaterial fPhysicMaterial, rPhysicMaterial;
     public Vector2 fFriction, rFriction;
 }
+
 public class BicycleController : MonoBehaviour
 {
     public CycleGeometry cycleGeometry;
@@ -27,37 +31,51 @@ public class BicycleController : MonoBehaviour
     public float steerAngle, axisAngle, leanAngle;
     public float topSpeed, torque, speedGain;
     public Vector3 COM;
+
     [HideInInspector]
     public bool isReversing;
+
     [Range(0, 4)]
     public float oscillationAmount;
+
     [Range(0, 1)]
     public float oscillationAffectSteerRatio;
-    float oscillationSteerEffect;
+
+    private float oscillationSteerEffect;
+
     [HideInInspector]
     public float cycleOscillation;
-    Rigidbody rb, fWheelRb, rWheelRb;
-    float turnAngle;
-    float xQuat, zQuat;
+
+    private Rigidbody rb, fWheelRb, rWheelRb;
+    private float turnAngle;
+    private float xQuat, zQuat;
+
     [HideInInspector]
     public float crankSpeed, crankCurrentQuat, crankLastQuat;
+
     public PedalAdjustments pedalAdjustments;
+
     [HideInInspector]
     public float turnLeanAmount;
-    RaycastHit hit;
+
+    private RaycastHit hit;
+
     [HideInInspector]
     public float customSteerAxis, customLeanAxis, customAccelerationAxis;
+
     [HideInInspector]
     public float relaxedSpeed, initialTopSpeed, pickUpSpeed;
-    Quaternion initialLowerForkLocalRotaion, initialHandlesRotation;
+
+    private Quaternion initialLowerForkLocalRotaion, initialHandlesRotation;
 
     //Ground Conformity
     public bool groundConformity;
-    RaycastHit hitGround;
-    Vector3 theRay;
-    float groundZ;
 
-    void Start()
+    private RaycastHit hitGround;
+    private Vector3 theRay;
+    private float groundZ;
+
+    private void Start()
     {
         rb = GetComponent<Rigidbody>();
         rb.maxAngularVelocity = Mathf.Infinity;
@@ -73,18 +91,15 @@ public class BicycleController : MonoBehaviour
 
         initialHandlesRotation = cycleGeometry.handles.transform.localRotation;
         initialLowerForkLocalRotaion = cycleGeometry.lowerFork.transform.localRotation;
-
     }
 
-    void FixedUpdate()
+    private void FixedUpdate()
     {
-
         //SteerControl
-        GetSmoothRawAxis("Horizontal", ref customSteerAxis, 5, 5);
+        GetSmoothRawAxis("LeftJoyX", ref customSteerAxis, 5, 5);
         fPhysicsWheel.transform.rotation = Quaternion.Euler(0, transform.rotation.eulerAngles.y + customSteerAxis * steerAngle + oscillationSteerEffect, 0);
         fPhysicsWheel.GetComponent<ConfigurableJoint>().axis = new Vector3(0, 1, 0);
         fPhysicsWheel.GetComponent<ConfigurableJoint>().axis = new Vector3(1, 0, 0);
-
 
         //PowerControl
         if (!Input.GetKey(KeyCode.LeftShift))
@@ -92,15 +107,15 @@ public class BicycleController : MonoBehaviour
         else
             topSpeed = Mathf.Lerp(topSpeed, initialTopSpeed, Time.deltaTime);
 
-        if (rb.velocity.magnitude < topSpeed && Input.GetAxisRaw("Vertical") > 0)
-            rWheelRb.AddTorque(transform.right * torque * Input.GetAxis("Vertical"));
+        if (rb.velocity.magnitude < topSpeed && Input.GetAxisRaw("LeftJoyY") > 0)
+            rWheelRb.AddTorque(transform.right * torque * Input.GetAxis("LeftJoyY"));
 
         //Body
         rb.centerOfMass = COM;
-        if (rb.velocity.magnitude < topSpeed && Input.GetAxisRaw("Vertical") > 0)
+        if (rb.velocity.magnitude < topSpeed && Input.GetAxisRaw("LeftJoyY") > 0)
             rb.AddForce(transform.forward * speedGain);
 
-        if (rb.velocity.magnitude < topSpeed * 0.05f && Input.GetAxisRaw("Vertical") < 0)
+        if (rb.velocity.magnitude < topSpeed * 0.05f && Input.GetAxisRaw("LeftJoyY") < 0)
             rb.AddForce(-transform.forward * speedGain * 0.5f);
 
         if (transform.InverseTransformDirection(rb.velocity).z < 0)
@@ -108,7 +123,7 @@ public class BicycleController : MonoBehaviour
         else
             isReversing = false;
 
-        if (Input.GetAxisRaw("Vertical") < 0 && isReversing == false)
+        if (Input.GetAxisRaw("LeftJoyY") < 0 && isReversing == false)
             rb.AddForce(-transform.forward * speedGain * 2);
 
         //Handles
@@ -125,9 +140,9 @@ public class BicycleController : MonoBehaviour
 
         //Crank
         crankCurrentQuat = cycleGeometry.RWheel.transform.rotation.eulerAngles.x;
-        if (Input.GetAxis("Vertical") > 0)
+        if (Input.GetAxis("LeftJoyY") > 0)
         {
-            crankSpeed += Mathf.Sqrt(Input.GetAxis("Vertical") * Mathf.Abs(Mathf.DeltaAngle(crankCurrentQuat, crankLastQuat) * pedalAdjustments.pedalingSpeed));
+            crankSpeed += Mathf.Sqrt(Input.GetAxis("LeftJoyY") * Mathf.Abs(Mathf.DeltaAngle(crankCurrentQuat, crankLastQuat) * pedalAdjustments.pedalingSpeed));
             crankSpeed %= 360;
         }
         else if (Mathf.Floor(crankSpeed) > 10)
@@ -152,12 +167,12 @@ public class BicycleController : MonoBehaviour
 
         pickUpSpeed = Mathf.Clamp(pickUpSpeed, 0.1f, 1);
 
-        GetSmoothRawAxis("Vertical", ref customAccelerationAxis, 1, 1);
+        GetSmoothRawAxis("LeftJoyY", ref customAccelerationAxis, 1, 1);
         cycleOscillation = -Mathf.Sin(Mathf.Deg2Rad * (crankSpeed + 90)) * (oscillationAmount * (Mathf.Clamp(topSpeed / rb.velocity.magnitude, 1f, 1.5f))) * pickUpSpeed;
-        GetSmoothRawAxis("Horizontal", ref customLeanAxis, 1, 1f);
+        GetSmoothRawAxis("LeftJoyX", ref customLeanAxis, 1, 1f);
         turnLeanAmount = customLeanAxis * -leanAngle * Mathf.Clamp(rb.velocity.magnitude * 0.1f, 0, 1);
         transform.rotation = Quaternion.Euler(transform.rotation.eulerAngles.x, transform.rotation.eulerAngles.y, turnLeanAmount + cycleOscillation + GroundConformity(groundConformity));
-        oscillationSteerEffect = cycleOscillation * Mathf.Clamp01(Input.GetAxis("Vertical")) * (oscillationAffectSteerRatio * (Mathf.Clamp(topSpeed / rb.velocity.magnitude, 1f, 1.5f)));
+        oscillationSteerEffect = cycleOscillation * Mathf.Clamp01(Input.GetAxis("LeftJoyY")) * (oscillationAffectSteerRatio * (Mathf.Clamp(topSpeed / rb.velocity.magnitude, 1f, 1.5f)));
 
         //FrictionSettings
         wheelFrictionSettings.fPhysicMaterial.staticFriction = wheelFrictionSettings.fFriction.x;
@@ -179,18 +194,18 @@ public class BicycleController : MonoBehaviour
                 velr.x *= Mathf.Clamp01(1 / (wheelFrictionSettings.rFriction.x + wheelFrictionSettings.rFriction.y));
                 rPhysicsWheel.GetComponent<Rigidbody>().velocity = rPhysicsWheel.transform.TransformDirection(velr);
             }
-
     }
-    float GroundConformity(bool toggle)
+
+    private float GroundConformity(bool toggle)
     {
         if (toggle)
         {
             groundZ = transform.rotation.eulerAngles.z;
         }
         return groundZ;
-
     }
-    float GetSmoothRawAxis(string name, ref float axis, float sensitivity, float gravity)
+
+    private float GetSmoothRawAxis(string name, ref float axis, float sensitivity, float gravity)
     {
         var r = Input.GetAxisRaw(name);
         var s = sensitivity;
@@ -203,7 +218,6 @@ public class BicycleController : MonoBehaviour
             axis = Mathf.Clamp01(Mathf.Abs(axis) - g * t) * Mathf.Sign(axis);
         return axis;
     }
-
 }
 
 //***MOBILE CONTROLS****//
@@ -307,7 +321,7 @@ public class BicycleController : MonoBehaviour
 //         }else{
 //             touchStart = false;
 //         }
-        
+
 // 	}
 
 //     void FixedUpdate()
@@ -328,7 +342,6 @@ public class BicycleController : MonoBehaviour
 //         fPhysicsWheel.transform.rotation = Quaternion.Euler(0, transform.rotation.eulerAngles.y + customSteerAxis * steerAngle + oscillationSteerEffect, 0);
 //         fPhysicsWheel.GetComponent<ConfigurableJoint>().axis = new Vector3(0, 1, 0);
 //         fPhysicsWheel.GetComponent<ConfigurableJoint>().axis = new Vector3(1, 0, 0);
-
 
 //         //PowerControl
 //         if (clampedDirection.y<0.8f)
